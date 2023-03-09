@@ -1,3 +1,10 @@
-const message = "Hello world from another file!";
+let counter = 0;
 
-module.exports = message;
+module.exports = {
+    incrementCounter() {
+        counter++;
+    },
+    getCounter() {
+        return counter;
+    }
+};
