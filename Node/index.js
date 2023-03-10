@@ -1,16 +1,39 @@
-// If we import content from another file through "require", that file will only be
-// executed once and its content will be cached. Anytime we try to require that file
-// later, the cached content will be returned
-const counterObject = require("./myScript.js");
+#!/usr/bin/env node
 
-console.log(counterObject.getCounter());
-counterObject.incrementCounter();
-console.log(counterObject.getCounter());
+import fs from "fs";
+import path from "path";
+import chalk from "chalk";
 
-// Importing the other file again
-const newCounterObject = require("./myScript.js");
+// Get a promisified version of the lstat function
+const { lstat } = fs.promises;
 
-// The value will be 1 instead of 0 as this new counter uses cached value from
-// the previously imported object. So, they're actually pointing to 
-// the same cached object
-console.log(newCounterObject.getCounter());
+// Current working directory will be default if no argument is passed
+const targetDir = process.argv[2] || process.cwd();
+
+fs.readdir(targetDir, async (err, fileNames) => {
+    if(err) {
+        console.log(err);
+        return;
+    }
+
+    // Callbacks donesn't execute sequentially so order of file names wouldn't
+    // match if we used them. That's why we're using a promisified version of
+    // lstat function since we can use await for maintaining the sequence
+    const statPromises = fileNames.map(fileName => {
+        return lstat(path.join(targetDir, fileName));
+    });
+
+    // Promise processing will be parallel so it's better than looping over
+    // and using await for individual promises.
+    const allStats = await Promise.all(statPromises);
+
+    for(let stats of allStats) {
+        const index = allStats.indexOf(stats);
+        
+        if(stats.isFile()) {
+            console.log(fileNames[index]);
+        } else {
+            console.log(chalk.bold(chalk.blue(fileNames[index])));
+        }
+    }
+});
